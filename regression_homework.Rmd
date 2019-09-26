@@ -63,7 +63,6 @@ library(ggplot2)
 library(dplyr)
 library(ggfortify)
 
-
 #Mauna Loa CO2 concentrations
 data(airquality)
 ```
@@ -72,8 +71,11 @@ data(airquality)
 1. Split data into training and test set (75% in train set, 25% in test set)
 
 ```{r}
-#train_regression = 
-#test_regression = 
+help(sample)
+set.seed(0)
+split = sample(nrow(airquality), round(nrow(airquality) * .75))
+train_regression = airquality[split,]
+test_regression = airquality[-split,]
 ```
 
 
@@ -89,22 +91,23 @@ We will predict the response of the Temperature based on Wind.
 
 This is the data we will fit a linear model to. 
 ```{r}
-# ggplot(data = train_regression) +
-#   geom_point(aes(x=Wind, y=Temp)) +
-#   theme_bw()
+ggplot(data = train_regression) +
+   geom_point(aes(x=Wind, y=Temp)) +
+   theme_bw()
 ```
 
 2. Create and fit a linear model to predict Temperature from Wind using the training set
 
 ```{r}
-#help(train)
-
-#linear_regression <- train( ~ , data= , method = "lm")
+#train
+linear_regression <- train(Temp ~ Wind , data=train_regression , method = "lm")
 ```
 
 
 3. Vizualize how your model performed on the train data by plotting the regression line on top of the train data points. 
 ```{r}
+
+ggplot(data = train_regression) + geom_point(aes(x=Wind, y=Temp)) + geom_abline(intercept = linear_regression$finalModel$coefficients[1], slope = linear_regression$finalModel$coefficients[2], col = 'blue') + theme_bw() 
 
 ```
 
@@ -118,46 +121,49 @@ This is the data we will fit a linear model to.
 
 4 a) See how the model performs on the test data
 ```{r}
-#help(predict)
-#linear_predict <- predict(, newdata=)
+linear_predict <- predict(linear_regression, newdata=test_regression)
 ```
 
 4 b) Look at the residuals. Are they close to zero?
 ```{r}
 #look at the median residual value. Close to zero is best
 #help(summary)
+summary(linear_regression)
 ```
-
+The median residual value is 1.244 Not the closest to 0, but pretty close.
 
 4 c) Plot predicted temperature vs observed temperature. A strong model should show a strong correlation
 ```{r}
-
+plot(x=linear_predict, y=test_regression$Temp)
 ```
 
 4 d) Visualize the predicted values in relation to the real data points. Look for homoscedasticity
 ```{r}
 # Extract coefficients from the model
-
+intercept = linear_regression$finalModel$coefficients[1]
+slope = linear_regression$finalModel$coefficients[2]
 # plot the regression line on the predicted values
+plot(y=linear_predict, x=test_regression$Wind) + abline(intercept, slope)
 
 # plot the original test values
-
+plot(y=test_regression$Temp,x=test_regression$Wind) + abline(intercept, slope)
 ```
 
 4 e) Residuals should be normally distributed. Plot the density of the residuals
 ```{r}
-#residuals_lin <- residuals(linear_regression)
+residuals_lin <- residuals(linear_regression)
 
-#ggplot(data=residvpredict) +
-#  geom_density(aes(residual))
+ggplot() +
+  geom_density(aes(residuals_lin))
 ```
 
 
 4 f) Independent variables and residuals should not be correlated
 ```{r}
-#cor.test(train_regression$Wind, resid(linear_regression))
+#help("cor.test")
+cor.test(train_regression$Wind, resid(linear_regression))
 ```
-
+Pearson's product-moment correlation is 4.50983e-17, suggesting no correlation.
 
 ### Linear Regression with Regularization
 
@@ -165,3 +171,21 @@ This is the data we will fit a linear model to.
 
 
 
+```{r}
+
+ridge_regression <- train(Temp ~ Wind+Month, data = train_regression ,method = "ridge")
+predict_temp = predict(lasso_regression,newdata = test_regression)
+real_temp = test_regression$Temp
+
+ggplot(data = test_regression) +
+   geom_point(aes(x=Wind, y=predict_temp, col = 'Predicted Temperature')) +
+   geom_point(aes(x=Wind, y=Temp, col = 'Observed Temperature')) + xlab("Wind") + ylab("Temperature")
+   theme_bw()
+
+ggplot(data = test_regression) +
+   geom_point(aes(x=Month, y=predict_temp, col = 'Predicted Temperature')) +
+   geom_point(aes(x=Month, y=Temp, col = 'Observed Temperature')) + xlab("Month") + ylab("Temperature") + xlim(min(airquality$Month), max(airquality$Month))
+   theme_bw()
+
+
+```
